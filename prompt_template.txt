@@ -1,0 +1,16 @@
+Analyze this research paper and extract the following information:
+
+1. Primary Stakeholders: Who are the main participants/stakeholders? e.g., students, teachers.
+2. Context: What is the context or setting? e.g., classroom, assignment.
+3. Tech/AI type: What technology or AI is used? e.g., game-based, ITS.
+4. Tool/Platform: What specific tools or platforms are mentioned? e.g., Decimal Point (name of platform)
+5. Education level: What education level are the participants? e.g., undergraduate
+6. Feedback term: What terms are used for 'feedback'? e.g., hint, scaffold
+7. Description of context: How is the feedback context described? How did they describe, if any, what the feedback is?
+8. Our evaluation: What is the quality/type of feedback?
+9. Agency type: What type of student agency is present? Is there any form of student agency?
+10. Feedback timing control: Do students control feedback timing?
+11. Metrics for evaluation: What metrics are used to evaluate results of feedback effect?
+12. Measurement of agency: How is agency measured, if any?
+
+Please provide clear, concise answers. If information is not available, write "Not specified".
