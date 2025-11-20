@@ -73,13 +73,80 @@ The tool extracts the following information categories:
    OPENAI_API_KEY=your_actual_api_key_here
    ```
 
-### 3. Configuration
+# Literature Review AI Coding Tool
 
-You can modify settings in `config.py`:
-- `OPENAI_MODEL`: Choose the OpenAI model (default: gpt-4o)
-- `OPENAI_MAX_TOKENS`: Maximum tokens for response (default: 2000)
-- `OPENAI_TEMPERATURE`: Response creativity (default: 0.3)
-- `MAX_TEXT_LENGTH`: Maximum PDF text length (default: 50000)
+An automated tool for extracting structured coding information from research papers using OpenAI's API. This tool processes PDF files containing academic papers and extracts specific information needed for systematic literature reviews in educational technology and learning sciences.
+
+## Features
+
+- **Automated PDF Processing**: Extract text from multiple PDF files in batch
+- **AI-Powered Analysis**: Uses OpenAI GPT models to analyse research papers
+- **Structured Data Extraction**: Extracts specific coding categories for literature reviews
+- **CSV Output**: Generates structured CSV files with all extracted data
+- **Configurable Prompts**: Customisable prompt templates for different review types
+- **Robust Error Handling**: Comprehensive logging and error management
+- **Progress Tracking**: Visual progress bars for batch processing
+
+## 📁 Project Structure
+
+```
+autocoding-lit/
+├── pdfs/                           # Place your PDF files here
+├── output/                         # Generated CSV files
+├── literature_review_extractor.py  # Main processing script
+├── config.py                       # Configuration settings
+├── prompt_template.txt             # AI prompt template
+├── requirements.txt                # Python dependencies
+├── .env.example                    # Environment variables template
+└── README.md                       # This file
+```
+
+## Coding Schema
+
+The tool extracts the following information categories:
+
+### 1. Stakeholders & Context
+- **1.1 Primary Stakeholders**: Who is involved in the study
+- **1.2 Context**: Domain knowledge, educational setting, or tool context
+- **1.3 Tech/AI type**: Type of technology or AI used
+- **1.4 Tool/Platform**: Specific tools or platforms mentioned
+- **1.5 Education level**: Educational level of participants
+
+### 2. Feedback Analysis
+- **2.1 Feedback term**: Lexical terms used for 'feedback'
+- **2.2 Description of context**: How feedback context is described
+- **2.3 Our evaluation**: Quality/type evaluation of feedback
+
+### 3. Agency Analysis
+- **3.1 Agency type**: Type of student/participant agency
+- **3.2 Feedback timing control**: Student control over feedback timing
+
+### 4. Measurement & Evaluation
+- **4.1 Metrics for evaluation**: Metrics used to evaluate results
+- **4.2 Measurement of agency**: How agency is measured
+
+## Setup Instructions
+
+### 1. Prerequisites
+
+- Python 3.8 or higher
+- OpenAI API key
+
+### 2. Installation
+
+1. **Clone or download this repository**
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Set up environment variables**:
+   - Copy `.env.example` to `.env`
+   - Add your OpenAI API key to the `.env` file:
+   ```
+   OPENAI_API_KEY=your_actual_api_key_here
+   ```
 
 ## Usage
 
@@ -87,7 +154,7 @@ You can modify settings in `config.py`:
 
 Place all your research paper PDFs in the `pdfs/` folder.
 
-### 2. Customize the Prompt (Optional)
+### 2. Customise the Prompt (Optional)
 
 Edit `prompt_template.txt` to modify the questions asked to the AI model. The default template includes questions for all coding categories.
 
@@ -168,15 +235,19 @@ The default prompt includes questions like:
 
 ## Contributing
 
-Feel free to modify and extend this tool for your specific research needs. Common customizations include:
+Feel free to modify and extend this tool for your specific research needs. Common customisations include:
 - Adding new coding categories
 - Modifying the prompt template
 - Changing output formats
 - Adding data validation rules
 
-## License
+## Licence
 
 This project is licensed under the terms specified in the LICENSE file.
+
+## Disclaimer
+
+This tool uses AI to extract information from research papers. Always review and validate the extracted data before using it in your research. The quality of extraction depends on the clarity of the source papers and the effectiveness of the prompt template.
 
 ## Disclaimer
 
