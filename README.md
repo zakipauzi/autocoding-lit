@@ -248,7 +248,3 @@ This project is licensed under the terms specified in the LICENSE file.
 ## Disclaimer
 
 This tool uses AI to extract information from research papers. Always review and validate the extracted data before using it in your research. The quality of extraction depends on the clarity of the source papers and the effectiveness of the prompt template.
-
-## Disclaimer
-
-This tool uses AI to extract information from research papers. Always review and validate the extracted data before using it in your research. The quality of extraction depends on the clarity of the source papers and the effectiveness of the prompt template.
