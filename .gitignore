@@ -25,5 +25,7 @@ Thumbs.db
 # Logs
 *.log
 
+pdfs/*.pdf
+
 # Output files (optional - remove if you want to track output files)
-# output/*.csv
+output/*.csv
