@@ -1,4 +1,4 @@
-Analyze this research paper and extract the following information. For each answer, provide BOTH the answer AND the source evidence (quote from the paper with section/page reference and do not make up things based on what should be there but what you see in the paper).
+Analyze this research paper and extract the following information. For each answer, provide BOTH the answer AND the source evidence (quote from the paper with section/page reference).
 
 Format your response as follows for each question:
 **Question Number. Answer**: [Your answer]
@@ -19,6 +19,6 @@ Format your response as follows for each question:
 
 IMPORTANT: 
 - If information is not available, write "Not specified" for both answer AND source
-- Always provide direct quotes from the paper as evidence
+- Always provide direct quotes from the paper as evidence and do not make up things based on what should be there but what you see written in the paper
 - Include section names or page numbers where the information was found
 - Be precise with your quotes - use quotation marks around exact text from the paper
