@@ -1,7 +1,0 @@
-Methodology:
-
-quality reviewing -- sampled 10% for human vs. AI coding
-
-Remaining papers to be split - AI as complement
-
-2nd phase: another 10% to be paired for peer coding

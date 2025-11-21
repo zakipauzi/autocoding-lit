@@ -81,42 +81,71 @@ class LiteratureReviewExtractor:
             raise
     
     def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract text from PDF file using pdfplumber with improved encoding handling."""
+        """Extract text from PDF with multiple fallback methods."""
+        # Method 1: Standard pdfplumber
         try:
             text = ""
-            # Try to open PDF with explicit encoding handling
             with pdfplumber.open(pdf_path) as pdf:
                 for page_num, page in enumerate(pdf.pages):
                     try:
                         page_text = page.extract_text()
                         if page_text:
-                            # Handle encoding issues by normalizing unicode characters
+                            # Normalize Unicode characters
+                            page_text = unicodedata.normalize('NFKD', page_text)
+                            # Handle encoding issues
                             page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
-                            # Replace problematic characters
-                            page_text = page_text.replace('\ufeff', '')  # Remove BOM
-                            page_text = page_text.replace('\u00a0', ' ')  # Replace non-breaking space
-                            page_text = page_text.replace('\u2019', "'")  # Replace smart apostrophe
-                            page_text = page_text.replace('\u201c', '"')  # Replace smart quote
-                            page_text = page_text.replace('\u201d', '"')  # Replace smart quote
-                            page_text = page_text.replace('\u2013', '-')  # Replace en dash
-                            page_text = page_text.replace('\u2014', '-')  # Replace em dash
                             text += page_text + "\n"
-                    except Exception as page_error:
-                        self.logger.warning(f"Error extracting page {page_num + 1} from {pdf_path}: {page_error}")
+                    except Exception as e:
+                        self.logger.warning(f"Error extracting page {page_num + 1} from {pdf_path}: {str(e)}")
                         continue
             
-            # Log the full extraction without truncation
-            self.logger.info(f"Extracted {len(text)} characters from {pdf_path}")
-            
-            # Only warn if extremely long (but don't truncate)
-            if len(text) > MAX_TEXT_LENGTH:
-                self.logger.warning(f"Large document detected ({len(text)} chars). Will use smart processing.")
-            
-            return text
-            
+            if text.strip():
+                self.logger.info(f"Extracted {len(text)} characters from {pdf_path}")
+                return text.strip()
         except Exception as e:
-            self.logger.error(f"Error extracting text from {pdf_path}: {e}")
-            return ""
+            self.logger.warning(f"Method 1 (pdfplumber standard) failed for {pdf_path}: {str(e)}")
+        
+        # Method 2: pdfplumber with tolerance settings
+        try:
+            text = ""
+            with pdfplumber.open(pdf_path) as pdf:
+                for page_num, page in enumerate(pdf.pages):
+                    try:
+                        page_text = page.extract_text(x_tolerance=3, y_tolerance=3)
+                        if page_text:
+                            page_text = unicodedata.normalize('NFKD', page_text)
+                            page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
+                            text += page_text + "\n"
+                    except Exception:
+                        continue
+            
+            if text.strip():
+                self.logger.info(f"Method 2 (pdfplumber tolerant) succeeded: {len(text)} characters from {pdf_path}")
+                return text.strip()
+        except Exception as e:
+            self.logger.warning(f"Method 2 (pdfplumber tolerant) failed for {pdf_path}: {str(e)}")
+        
+        # Method 3: PyMuPDF (if available)
+        if fitz:
+            try:
+                doc = fitz.open(pdf_path)
+                text = ""
+                for page in doc:
+                    page_text = page.get_text()
+                    if page_text:
+                        page_text = unicodedata.normalize('NFKD', page_text)
+                        page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
+                        text += page_text + "\n"
+                doc.close()
+                
+                if text.strip():
+                    self.logger.info(f"Method 3 (PyMuPDF) succeeded: {len(text)} characters from {pdf_path}")
+                    return text.strip()
+            except Exception as e:
+                self.logger.warning(f"Method 3 (PyMuPDF) failed for {pdf_path}: {str(e)}")
+        
+        self.logger.error(f"All text extraction methods failed for {pdf_path}")
+        return ""
     
     def get_paper_title(self, text: str, filename: str) -> str:
         """Use filename as paper title with proper formatting."""
@@ -366,7 +395,11 @@ class LiteratureReviewExtractor:
             self.logger.error(f"PDF folder {PDF_FOLDER} does not exist")
             return []
         
-        pdf_files = list(pdf_folder.glob("*.pdf"))
+        # Find PDF files with both .pdf and .PDF extensions
+        pdf_files = list(pdf_folder.glob("*.pdf")) + list(pdf_folder.glob("*.PDF"))
+        
+        # Remove duplicates (in case same file exists with different cases)
+        pdf_files = list(set(pdf_files))
         
         if not pdf_files:
             self.logger.warning(f"No PDF files found in {PDF_FOLDER}")
