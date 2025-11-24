@@ -414,9 +414,41 @@ class LiteratureReviewExtractor:
                                     self.logger.info(f"Method 3 - Extracted {source_column}: {source[:50]}...")
                         break
                 
+                # Method 4: Look for "X. **Question Text**" followed by "**Answer**: content"
+                for num_str, base_column in base_columns.items():
+                    # Skip if already extracted
+                    if coded_data[base_column] != "Not specified":
+                        continue
+                        
+                    if line.startswith(f"{num_str}.") and "**" in line:
+                        # Look for **Answer**: in the next few lines
+                        j = i + 1
+                        while j < len(lines) and j < i + 5:
+                            next_line = lines[j]
+                            if next_line.startswith("**Answer**:") or next_line.strip().startswith("**Answer**:"):
+                                answer = next_line.replace("**Answer**:", "").strip()
+                                if answer and len(answer) > 3:
+                                    coded_data[base_column] = answer
+                                    self.logger.info(f"Method 4 - Extracted {base_column}: {answer[:50]}...")
+                                    
+                                    # Look for source in the next line
+                                    source_column = base_column + " - Source"
+                                    if j + 1 < len(lines):
+                                        source_line = lines[j + 1]
+                                        if source_line.startswith("**Source**:") or source_line.strip().startswith("**Source**:"):
+                                            source = source_line.replace("**Source**:", "").strip()
+                                            coded_data[source_column] = source
+                                            self.logger.info(f"Method 4 - Extracted {source_column}: {source[:50]}...")
+                                break
+                            elif any(next_line.startswith(f"{n}.") for n in base_columns.keys()):
+                                # Hit the next question, stop looking
+                                break
+                            j += 1
+                        break
+                
                 i += 1            # Log extraction summary
-            # Total fields = CSV_COLUMNS - 2 (exclude Title and Include columns) 
-            total_fields = len(CSV_COLUMNS) - 2  
+            # Total fields = CSV_COLUMNS - 3 (exclude Title, Include, and Exclusion Reason columns) 
+            total_fields = len(CSV_COLUMNS) - 3  
             extracted_count = sum(1 for col, val in coded_data.items() 
                                 if col not in ["Title", "Include in Review (Y/N)", "Exclusion Reason"] and val != "Not specified")
             self.logger.info(f"Successfully extracted {extracted_count} out of {total_fields} fields")
