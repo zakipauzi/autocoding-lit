@@ -22,6 +22,7 @@ autocoding-lit/
 ├── config.py                       # Configuration settings
 ├── prompt_template.txt             # AI prompt template
 ├── test_schema.py                  # Schema testing suite
+├── test_extraction.py              # PDF extraction testing
 ├── requirements.txt                # Python dependencies
 ├── .env.example                    # Environment variables template
 └── README.md                       # This file
@@ -106,6 +107,29 @@ The generated CSV file contains:
 - **Error handling**: "Not specified" for missing information, "Processing failed" for errors
 
 ## Testing
+
+### 🔍 PDF Extraction Testing
+
+Before running the full literature review process, verify that all PDF files can be successfully processed:
+
+```bash
+python test_extraction.py
+```
+
+**Benefits**:
+- ✅ **Verify all PDFs are readable** - Tests 6 different extraction methods
+- 📊 **Get extraction statistics** - Character counts, file sizes, success rates
+- 🚫 **No OpenAI API required** - Tests PDF processing only
+- ⚡ **Quick validation** - Runs in seconds
+
+**Sample Output**:
+```
+📊 EXTRACTION TEST SUMMARY
+   Total files: 22
+   ✅ Successful: 22
+   ❌ Failed: 0
+   📈 Success rate: 100.0%
+```
 
 ### 🧪 Schema Testing Suite
 
@@ -200,6 +224,11 @@ To process only specific PDFs, you can modify the script or move unwanted PDFs o
    - Adjust `OPENAI_TEMPERATURE` in `config.py` (lower = more consistent)
    - Modify the prompt template to be more specific
    - Try a different OpenAI model
+
+5. **PDF extraction issues**
+   - Run `python test_extraction.py` to test all PDF files
+   - Check if problematic PDFs are encrypted, corrupted, or image-based
+   - The tool uses 6 different extraction methods for maximum compatibility
 
 ### Logs
 

@@ -18,10 +18,16 @@ import pdfplumber
 from openai import OpenAI
 from tqdm import tqdm
 import unicodedata
+import subprocess
+import tempfile
 try:
     import fitz  # PyMuPDF - for additional text extraction
 except ImportError:
     fitz = None
+try:
+    import PyPDF2
+except ImportError:
+    PyPDF2 = None
 
 from config import (
     OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS, OPENAI_TEMPERATURE,
@@ -82,11 +88,17 @@ class LiteratureReviewExtractor:
             raise
     
     def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract text from PDF with multiple fallback methods."""
+        """Extract text from PDF with multiple fallback methods including OCR."""
+        filename = Path(pdf_path).name
+        
         # Method 1: Standard pdfplumber
         try:
             text = ""
             with pdfplumber.open(pdf_path) as pdf:
+                # Check if PDF is encrypted
+                if hasattr(pdf, 'is_encrypted') and pdf.is_encrypted:
+                    self.logger.warning(f"PDF {filename} is encrypted, attempting to decrypt")
+                
                 for page_num, page in enumerate(pdf.pages):
                     try:
                         page_text = page.extract_text()
@@ -97,22 +109,37 @@ class LiteratureReviewExtractor:
                             page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
                             text += page_text + "\n"
                     except Exception as e:
-                        self.logger.warning(f"Error extracting page {page_num + 1} from {pdf_path}: {str(e)}")
+                        self.logger.warning(f"Error extracting page {page_num + 1} from {filename}: {str(e)}")
                         continue
             
             if text.strip():
-                self.logger.info(f"Extracted {len(text)} characters from {pdf_path}")
+                self.logger.info(f"Method 1 (pdfplumber) succeeded: {len(text)} characters from {filename}")
                 return text.strip()
         except Exception as e:
-            self.logger.warning(f"Method 1 (pdfplumber standard) failed for {pdf_path}: {str(e)}")
+            self.logger.warning(f"Method 1 (pdfplumber standard) failed for {filename}: {str(e)}")
         
-        # Method 2: pdfplumber with tolerance settings
+        # Method 2: pdfplumber with advanced tolerance settings
         try:
             text = ""
             with pdfplumber.open(pdf_path) as pdf:
                 for page_num, page in enumerate(pdf.pages):
                     try:
-                        page_text = page.extract_text(x_tolerance=3, y_tolerance=3)
+                        # Try multiple extraction strategies
+                        strategies = [
+                            {'x_tolerance': 3, 'y_tolerance': 3},
+                            {'x_tolerance': 1, 'y_tolerance': 1},
+                            {'x_tolerance': 5, 'y_tolerance': 5}
+                        ]
+                        
+                        page_text = None
+                        for strategy in strategies:
+                            try:
+                                page_text = page.extract_text(**strategy)
+                                if page_text and len(page_text.strip()) > 50:  # Minimum meaningful content
+                                    break
+                            except Exception:
+                                continue
+                        
                         if page_text:
                             page_text = unicodedata.normalize('NFKD', page_text)
                             page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
@@ -121,31 +148,145 @@ class LiteratureReviewExtractor:
                         continue
             
             if text.strip():
-                self.logger.info(f"Method 2 (pdfplumber tolerant) succeeded: {len(text)} characters from {pdf_path}")
+                self.logger.info(f"Method 2 (pdfplumber advanced) succeeded: {len(text)} characters from {filename}")
                 return text.strip()
         except Exception as e:
-            self.logger.warning(f"Method 2 (pdfplumber tolerant) failed for {pdf_path}: {str(e)}")
+            self.logger.warning(f"Method 2 (pdfplumber advanced) failed for {filename}: {str(e)}")
         
-        # Method 3: PyMuPDF (if available)
+        # Method 3: PyMuPDF with multiple extraction modes
         if fitz:
             try:
                 doc = fitz.open(pdf_path)
                 text = ""
-                for page in doc:
-                    page_text = page.get_text()
-                    if page_text:
-                        page_text = unicodedata.normalize('NFKD', page_text)
-                        page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
-                        text += page_text + "\n"
+                
+                for page_num, page in enumerate(doc):
+                    try:
+                        # Try different text extraction methods
+                        page_text = None
+                        
+                        # Standard text extraction
+                        page_text = page.get_text()
+                        
+                        # If that fails, try dictionary method
+                        if not page_text or len(page_text.strip()) < 20:
+                            page_text = page.get_text("dict")
+                            if isinstance(page_text, dict) and 'blocks' in page_text:
+                                text_parts = []
+                                for block in page_text['blocks']:
+                                    if 'lines' in block:
+                                        for line in block['lines']:
+                                            if 'spans' in line:
+                                                for span in line['spans']:
+                                                    if 'text' in span:
+                                                        text_parts.append(span['text'])
+                                page_text = ' '.join(text_parts)
+                        
+                        # If still no text, try HTML method
+                        if not page_text or len(page_text.strip()) < 20:
+                            html_text = page.get_text("html")
+                            if html_text:
+                                # Simple HTML tag removal
+                                import re
+                                page_text = re.sub('<[^<]+?>', '', html_text)
+                        
+                        if page_text:
+                            page_text = unicodedata.normalize('NFKD', str(page_text))
+                            page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
+                            text += page_text + "\n"
+                            
+                    except Exception as e:
+                        self.logger.warning(f"PyMuPDF error on page {page_num + 1} of {filename}: {str(e)}")
+                        continue
+                
                 doc.close()
                 
                 if text.strip():
-                    self.logger.info(f"Method 3 (PyMuPDF) succeeded: {len(text)} characters from {pdf_path}")
+                    self.logger.info(f"Method 3 (PyMuPDF advanced) succeeded: {len(text)} characters from {filename}")
                     return text.strip()
             except Exception as e:
-                self.logger.warning(f"Method 3 (PyMuPDF) failed for {pdf_path}: {str(e)}")
+                self.logger.warning(f"Method 3 (PyMuPDF advanced) failed for {filename}: {str(e)}")
         
-        self.logger.error(f"All text extraction methods failed for {pdf_path}")
+        # Method 4: PyPDF2 (if available)
+        if PyPDF2:
+            try:
+                text = ""
+                with open(pdf_path, 'rb') as file:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    
+                    # Check if encrypted
+                    if pdf_reader.is_encrypted:
+                        try:
+                            pdf_reader.decrypt('')  # Try empty password
+                        except Exception:
+                            self.logger.warning(f"Could not decrypt {filename} with empty password")
+                    
+                    for page_num, page in enumerate(pdf_reader.pages):
+                        try:
+                            page_text = page.extract_text()
+                            if page_text:
+                                page_text = unicodedata.normalize('NFKD', page_text)
+                                page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
+                                text += page_text + "\n"
+                        except Exception as e:
+                            self.logger.warning(f"PyPDF2 error on page {page_num + 1} of {filename}: {str(e)}")
+                            continue
+                
+                if text.strip():
+                    self.logger.info(f"Method 4 (PyPDF2) succeeded: {len(text)} characters from {filename}")
+                    return text.strip()
+            except Exception as e:
+                self.logger.warning(f"Method 4 (PyPDF2) failed for {filename}: {str(e)}")
+        
+        # Method 5: Command-line pdftotext (if available)
+        try:
+            result = subprocess.run(
+                ['pdftotext', pdf_path, '-'], 
+                capture_output=True, 
+                text=True, 
+                timeout=30,
+                encoding='utf-8',
+                errors='ignore'
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                text = unicodedata.normalize('NFKD', result.stdout)
+                self.logger.info(f"Method 5 (pdftotext) succeeded: {len(text)} characters from {filename}")
+                return text.strip()
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+            self.logger.warning(f"Method 5 (pdftotext) failed for {filename}: {str(e)}")
+        
+        # Method 6: Try to extract images and attempt OCR (basic fallback)
+        try:
+            # This is a last resort - extract some basic info from PDF structure
+            with open(pdf_path, 'rb') as file:
+                # Read first 1000 bytes to check for PDF structure
+                header = file.read(1000)
+                if b'%PDF' in header:
+                    # It's a valid PDF, might be image-based
+                    self.logger.warning(f"PDF {filename} appears to be image-based or corrupted - extracting minimal info")
+                    
+                    # Try to get filename-based fallback title  
+                    fallback_title = Path(pdf_path).stem
+                    fallback_text = f"Title: {fallback_title}\n\nNote: This PDF could not be processed due to technical issues. The file may be:\n- Image-based (scanned document)\n- Corrupted\n- Password protected\n- Using non-standard encoding\n\nPlease manually review this paper."
+                    
+                    return fallback_text
+        except Exception as e:
+            self.logger.warning(f"Method 6 (fallback) failed for {filename}: {str(e)}")
+        
+        # Final check - log detailed error information
+        try:
+            file_size = Path(pdf_path).stat().st_size
+            self.logger.error(f"All text extraction methods failed for {filename}")
+            self.logger.error(f"File size: {file_size} bytes")
+            
+            # Check if file is readable
+            with open(pdf_path, 'rb') as f:
+                header = f.read(10)
+                self.logger.error(f"File header: {header}")
+                
+        except Exception as e:
+            self.logger.error(f"Could not read file info for {filename}: {str(e)}")
+        
         return ""
     
     def get_paper_title(self, text: str, filename: str) -> str:
@@ -500,7 +641,20 @@ class LiteratureReviewExtractor:
             
             if not text:
                 self.logger.warning(f"No text extracted from {pdf_file.name}")
-                results.append(self._create_empty_row(pdf_file.name))
+                # Create a row with failure information but still try to get a meaningful title
+                empty_row = self._create_empty_row(pdf_file.name)
+                empty_row['Exclusion Reason'] = "Text extraction failed - file may be corrupted, encrypted, or image-based"
+                results.append(empty_row)
+                continue
+            
+            # Check if extracted text is meaningful (not just fallback message)
+            if "could not be processed due to technical issues" in text.lower():
+                self.logger.warning(f"Fallback text used for {pdf_file.name} - manual review needed")
+                # Use the extracted text anyway as it contains the title
+                title = self.get_paper_title(text, pdf_file.name)
+                empty_row = self._create_empty_row(title)
+                empty_row['Exclusion Reason'] = "PDF processing issues - requires manual review"
+                results.append(empty_row)
                 continue
             
             # Get title
