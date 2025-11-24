@@ -21,81 +21,7 @@ autocoding-lit/
 ├── literature_review_extractor.py  # Main processing script
 ├── config.py                       # Configuration settings
 ├── prompt_template.txt             # AI prompt template
-├── requirements.txt                # Python dependencies
-├── .env.example                    # Environment variables template
-└── README.md                       # This file
-```
-
-## Coding Schema
-
-The tool extracts the following information categories:
-
-### 1. Stakeholders & Context
-- **1.1 Primary Stakeholders**: Who is involved in the study
-- **1.2 Context**: Domain knowledge, educational setting, or tool context
-- **1.3 Tech/AI type**: Type of technology or AI used
-- **1.4 Tool/Platform**: Specific tools or platforms mentioned
-- **1.5 Education level**: Educational level of participants
-
-### 2. Feedback Analysis
-- **2.1 Feedback term**: Lexical terms used for 'feedback'
-- **2.2 Description of context**: How feedback context is described
-- **2.3 Our evaluation**: Quality/type evaluation of feedback
-
-### 3. Agency Analysis
-- **3.1 Agency type**: Type of student/participant agency
-- **3.2 Feedback timing control**: Student control over feedback timing
-
-### 4. Measurement & Evaluation
-- **4.1 Metrics for evaluation**: Metrics used to evaluate results
-- **4.2 Measurement of agency**: How agency is measured
-
-## Setup Instructions
-
-### 1. Prerequisites
-
-- Python 3.8 or higher
-- OpenAI API key
-
-### 2. Installation
-
-1. **Clone or download this repository**
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables**:
-   - Copy `.env.example` to `.env`
-   - Add your OpenAI API key to the `.env` file:
-   ```
-   OPENAI_API_KEY=your_actual_api_key_here
-   ```
-
-# Literature Review AI Coding Tool
-
-An automated tool for extracting structured coding information from research papers using OpenAI's API. This tool processes PDF files containing academic papers and extracts specific information needed for systematic literature reviews in educational technology and learning sciences.
-
-## Features
-
-- **Automated PDF Processing**: Extract text from multiple PDF files in batch
-- **AI-Powered Analysis**: Uses OpenAI GPT models to analyse research papers
-- **Structured Data Extraction**: Extracts specific coding categories for literature reviews
-- **CSV Output**: Generates structured CSV files with all extracted data
-- **Configurable Prompts**: Customisable prompt templates for different review types
-- **Robust Error Handling**: Comprehensive logging and error management
-- **Progress Tracking**: Visual progress bars for batch processing
-
-## 📁 Project Structure
-
-```
-autocoding-lit/
-├── pdfs/                           # Place your PDF files here
-├── output/                         # Generated CSV files
-├── literature_review_extractor.py  # Main processing script
-├── config.py                       # Configuration settings
-├── prompt_template.txt             # AI prompt template
+├── test_schema.py                  # Schema testing suite
 ├── requirements.txt                # Python dependencies
 ├── .env.example                    # Environment variables template
 └── README.md                       # This file
@@ -154,7 +80,7 @@ The tool extracts the following information categories:
 
 Place all your research paper PDFs in the `pdfs/` folder.
 
-### 2. Customise the Prompt (Optional)
+### 2. Customize the Prompt (Optional)
 
 Edit `prompt_template.txt` to modify the questions asked to the AI model. The default template includes questions for all coding categories.
 
@@ -178,6 +104,61 @@ The generated CSV file contains:
 - **Title**: Extracted paper title or filename
 - **All coding categories**: As defined in the coding schema above
 - **Error handling**: "Not specified" for missing information, "Processing failed" for errors
+
+## Testing
+
+### 🧪 Schema Testing Suite
+
+The project includes a comprehensive test suite (`test_schema.py`) that validates the output schema and parsing logic using mock data without requiring an OpenAI API connection.
+
+### ✅ Test Coverage
+
+The test suite includes **11 comprehensive tests** covering:
+
+1. **Schema Validation** - All 27 CSV columns correctly defined
+2. **Multi-Method Parsing** - Tests all 4 parsing methods:
+   - Method 1: `**1. Field**: content`
+   - Method 2: `1. **Field**: content` 
+   - Method 3: `1. Field: content`
+   - Method 4: `**1. Field**: question\n**Answer**: content\n**Source**: evidence`
+3. **Data Handling** - Complete, partial, excluded, and empty responses
+4. **Error Handling** - Processing failures and edge cases
+5. **CSV Export** - Proper formatting and encoding
+6. **Edge Cases** - Title formatting, question filtering, etc.
+
+### Running Tests
+
+```bash
+# Run all tests
+python test_schema.py
+
+# Run specific test  
+python -m unittest test_schema.TestLiteratureReviewSchema.test_csv_columns_schema -v
+
+# Run tests in verbose mode
+python -m unittest test_schema.TestLiteratureReviewSchema -v
+```
+
+### Mock Data Examples
+
+The tests use realistic mock OpenAI responses that simulate actual extraction scenarios:
+
+```python
+# Complete response with all fields
+mock_response_complete = """
+**Include in Review**: Y
+**1. Primary Stakeholders**: Students and teachers in mathematics education
+**Source**: "Participants included 120 middle school students..." 
+# ... (full response)
+"""
+
+# Method 4 Answer/Source format  
+mock_response_answer_format = """
+**1. Primary Stakeholders**: Who are the main participants?
+**Answer**: Elementary school students and their teachers
+**Source**: "The study involved 200 elementary students..."
+"""
+```
 
 ## Advanced Usage
 
@@ -235,13 +216,13 @@ The default prompt includes questions like:
 
 ## Contributing
 
-Feel free to modify and extend this tool for your specific research needs. Common customisations include:
+Feel free to modify and extend this tool for your specific research needs. Common customizations include:
 - Adding new coding categories
 - Modifying the prompt template
 - Changing output formats
 - Adding data validation rules
 
-## Licence
+## License
 
 This project is licensed under the terms specified in the LICENSE file.
 
