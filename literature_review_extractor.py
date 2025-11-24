@@ -8,9 +8,6 @@ It reads PDFs from a specified folder, extracts text, sends it to OpenAI for ana
 and saves the results in a CSV file.
 """
 
-import os
-import csv
-import json
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -21,7 +18,6 @@ import pdfplumber
 from openai import OpenAI
 from tqdm import tqdm
 import unicodedata
-import re
 try:
     import fitz  # PyMuPDF - for additional text extraction
 except ImportError:
@@ -29,8 +25,7 @@ except ImportError:
 
 from config import (
     OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS, OPENAI_TEMPERATURE,
-    PDF_FOLDER, OUTPUT_FOLDER, PROMPT_FILE, CSV_COLUMNS,
-    MAX_TEXT_LENGTH, CHUNK_SIZE, MAX_CONTEXT_TOKENS
+    PDF_FOLDER, OUTPUT_FOLDER, PROMPT_FILE, CSV_COLUMNS, MAX_CONTEXT_TOKENS
 )
 
 
@@ -358,7 +353,14 @@ class LiteratureReviewExtractor:
                             
                             # Filter out questions (shouldn't start with question words)
                             question_starters = ["what ", "how ", "who ", "when ", "where ", "why ", "does ", "do ", "is ", "are ", "can ", "will ", "should "]
-                            if not any(answer.lower().startswith(q) for q in question_starters) and len(answer) > 3:
+                            # Also check for common question patterns - be more specific
+                            is_question = (any(answer.lower().startswith(q) for q in question_starters) or 
+                                         answer.endswith('?') or
+                                         ('question' in answer.lower() and len(answer) < 50) or  # Only short text with "question" 
+                                         (answer.lower().startswith('what ') or answer.lower().startswith('who ') or 
+                                          answer.lower().startswith('how ') or answer.lower().startswith('when ') or
+                                          answer.lower().startswith('where ') or answer.lower().startswith('why ')))
+                            if not is_question and len(answer) > 3:
                                 coded_data[base_column] = answer
                                 self.logger.info(f"Method 1 - Extracted {base_column}: {answer[:50]}...")
                                 
@@ -414,13 +416,14 @@ class LiteratureReviewExtractor:
                                     self.logger.info(f"Method 3 - Extracted {source_column}: {source[:50]}...")
                         break
                 
-                # Method 4: Look for "X. **Question Text**" followed by "**Answer**: content"
+                # Method 4: Look for "**X. Question Text**" or "X. **Question Text**" followed by "**Answer**: content"
                 for num_str, base_column in base_columns.items():
                     # Skip if already extracted
                     if coded_data[base_column] != "Not specified":
                         continue
                         
-                    if line.startswith(f"{num_str}.") and "**" in line:
+                    # Check for both "**X." and "X." patterns  
+                    if (line.startswith(f"**{num_str}.") or line.startswith(f"{num_str}.")) and "**" in line:
                         # Look for **Answer**: in the next few lines
                         j = i + 1
                         while j < len(lines) and j < i + 5:
@@ -440,7 +443,7 @@ class LiteratureReviewExtractor:
                                             coded_data[source_column] = source
                                             self.logger.info(f"Method 4 - Extracted {source_column}: {source[:50]}...")
                                 break
-                            elif any(next_line.startswith(f"{n}.") for n in base_columns.keys()):
+                            elif any(next_line.startswith(f"**{n}.") or next_line.startswith(f"{n}.") for n in base_columns.keys()):
                                 # Hit the next question, stop looking
                                 break
                             j += 1
