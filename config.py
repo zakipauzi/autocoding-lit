@@ -16,10 +16,11 @@ OUTPUT_FOLDER = 'output'
 PROMPT_FILE = 'prompt_template.txt'
 
 # CSV Column Headers (based on your coding schema with source evidence)
-# Total: 26 columns (Title + Exclusion + 12 questions + 12 source evidence columns)
+# Total: 27 columns (Title + Include/Exclude + Exclusion Reason + 12 questions + 12 source evidence columns)
 CSV_COLUMNS = [
     'Title',
     'Include in Review (Y/N)',
+    'Exclusion Reason',
     '1.1 Primary Stakeholders',
     '1.1 Primary Stakeholders - Source',
     '1.2 Context',

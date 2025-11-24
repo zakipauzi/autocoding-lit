@@ -13,10 +13,44 @@ Format your response starting with:
 
 If the paper is to be INCLUDED, then answer all the following questions. If EXCLUDED, you may skip the detailed questions.
 
-Format your response as follows for each question:
-**Question Number. Answer**: [Your answer]
-**Source**: [Quote from paper with section/page reference]
+Format your response as follows for each question (EXACTLY as shown):
+**1. Primary Stakeholders**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
 
+**2. Context**: [Your answer here]  
+**Source**: [Direct quote from paper with section/page reference]
+
+**3. Tech/AI type**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**4. Tool/Platform**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**5. Education level**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**6. Feedback term**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**7. Description of mechanism and context**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**8. Our interpretation/analysis**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**9. Agency type**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**10. Feedback timing control**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**11. Metrics for evaluation**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+**12. Measurement of agency**: [Your answer here]
+**Source**: [Direct quote from paper with section/page reference]
+
+DETAILED QUESTIONS:
 1. Primary Stakeholders: Who are the main participants/stakeholders? e.g., students, teachers.
 2. Context: What is the context or setting? e.g., classroom, assignment.
 3. Tech/AI type: What technology or AI is used? e.g., game-based, ITS.
@@ -32,6 +66,8 @@ Format your response as follows for each question:
 
 IMPORTANT: 
 - If information is not available, write "Not specified" for both answer AND source
-- Always provide direct quotes from the paper as evidence
+- ALWAYS provide direct quotes from the paper as evidence with **Source**: [quote]
 - Include section names or page numbers where the information was found
 - Be precise with your quotes - use quotation marks around exact text from the paper
+- NEVER leave sources blank - if you provide an answer, you MUST provide the source
+- Sources should be actual quotes from the paper, not just page references

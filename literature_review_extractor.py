@@ -316,13 +316,16 @@ class LiteratureReviewExtractor:
             # Split response into lines for processing
             lines = [line.strip() for line in response_text.split('\n') if line.strip()]
             
-            # First, look for inclusion/exclusion decision
+            # First, look for inclusion/exclusion decision and reason
             for line in lines:
                 if line.startswith("**Include in Review**:"):
                     include_decision = line.replace("**Include in Review**:", "").strip()
                     coded_data['Include in Review (Y/N)'] = include_decision
                     self.logger.info(f"Extracted inclusion decision: {include_decision}")
-                    break
+                elif line.startswith("**Reason if excluded**:"):
+                    exclusion_reason = line.replace("**Reason if excluded**:", "").strip()
+                    coded_data['Exclusion Reason'] = exclusion_reason
+                    self.logger.info(f"Extracted exclusion reason: {exclusion_reason}")
             
             # Base column names (without " - Source" suffix)
             base_columns = {
@@ -344,28 +347,34 @@ class LiteratureReviewExtractor:
             while i < len(lines):
                 line = lines[i]
                 
-                # Method 1: Look for format "**X. Answer**: content"
+                # Method 1: Look for format "**X. [Question Title]**: content"
                 for num_str, base_column in base_columns.items():
-                    if line.startswith(f"**{num_str}.") and "**:" in line:
-                        answer_part = line.split("**:", 1)
-                        if len(answer_part) > 1:
-                            answer = answer_part[1].strip()
-                            coded_data[base_column] = answer
-                            self.logger.info(f"Extracted {base_column}: {answer[:50]}...")
+                    if line.startswith(f"**{num_str}."):
+                        # Extract everything after the first colon
+                        if ":" in line:
+                            answer = line.split(":", 1)[1].strip()
+                            # Remove any additional ** formatting
+                            answer = answer.replace("**", "").strip()
                             
-                            # Look for source in next few lines
-                            source_column = base_column + " - Source"
-                            j = i + 1
-                            while j < len(lines) and j < i + 5:
-                                next_line = lines[j]
-                                if next_line.startswith("**Source**:"):
-                                    source = next_line.replace("**Source**:", "").strip()
-                                    coded_data[source_column] = source
-                                    self.logger.info(f"Extracted {source_column}: {source[:50]}...")
-                                    break
-                                elif any(next_line.startswith(f"**{n}.") for n in base_columns.keys()):
-                                    break
-                                j += 1
+                            # Filter out questions (shouldn't start with question words)
+                            question_starters = ["what ", "how ", "who ", "when ", "where ", "why ", "does ", "do ", "is ", "are ", "can ", "will ", "should "]
+                            if not any(answer.lower().startswith(q) for q in question_starters) and len(answer) > 3:
+                                coded_data[base_column] = answer
+                                self.logger.info(f"Method 1 - Extracted {base_column}: {answer[:50]}...")
+                                
+                                # Look for source in next few lines
+                                source_column = base_column + " - Source"
+                                j = i + 1
+                                while j < len(lines) and j < i + 5:
+                                    next_line = lines[j]
+                                    if next_line.startswith("**Source**:"):
+                                        source = next_line.replace("**Source**:", "").strip()
+                                        coded_data[source_column] = source
+                                        self.logger.info(f"Method 1 - Extracted {source_column}: {source[:50]}...")
+                                        break
+                                    elif any(next_line.startswith(f"**{n}.") for n in base_columns.keys()):
+                                        break
+                                    j += 1
                         break
                 
                 # Method 2: Look for format "X. **Field**: content" 
@@ -388,16 +397,28 @@ class LiteratureReviewExtractor:
                         answer = line.split(":", 1)[1].strip()
                         # Clean up markdown formatting
                         answer = answer.replace("**", "").replace("*", "").strip()
-                        if answer and not answer.startswith("What") and not answer.startswith("Who") and not answer.startswith("How"):
+                        
+                        # Enhanced question filtering
+                        question_starters = ["what ", "how ", "who ", "when ", "where ", "why ", "does ", "do ", "is ", "are ", "can ", "will ", "should "]
+                        if answer and not any(answer.lower().startswith(q) for q in question_starters) and len(answer) > 3:
                             coded_data[base_column] = answer
-                            self.logger.info(f"Extracted {base_column}: {answer[:50]}...")
+                            self.logger.info(f"Method 3 - Extracted {base_column}: {answer[:50]}...")
+                            
+                            # Look for source on next line for this method too
+                            source_column = base_column + " - Source"
+                            if i + 1 < len(lines):
+                                next_line = lines[i + 1]
+                                if "source" in next_line.lower() and ":" in next_line:
+                                    source = next_line.split(":", 1)[1].strip()
+                                    coded_data[source_column] = source
+                                    self.logger.info(f"Method 3 - Extracted {source_column}: {source[:50]}...")
                         break
                 
                 i += 1            # Log extraction summary
             # Total fields = CSV_COLUMNS - 2 (exclude Title and Include columns) 
             total_fields = len(CSV_COLUMNS) - 2  
             extracted_count = sum(1 for col, val in coded_data.items() 
-                                if col not in ["Title", "Include in Review (Y/N)"] and val != "Not specified")
+                                if col not in ["Title", "Include in Review (Y/N)", "Exclusion Reason"] and val != "Not specified")
             self.logger.info(f"Successfully extracted {extracted_count} out of {total_fields} fields")
             
         except Exception as e:
@@ -408,9 +429,10 @@ class LiteratureReviewExtractor:
     
     def _create_empty_row(self, title: str) -> Dict[str, str]:
         """Create empty row with default values when processing fails."""
-        empty_row = {col: "Processing failed" for col in CSV_COLUMNS if col not in ['Title', 'Include in Review (Y/N)']}
+        empty_row = {col: "Processing failed" for col in CSV_COLUMNS if col not in ['Title', 'Include in Review (Y/N)', 'Exclusion Reason']}
         empty_row['Title'] = title
         empty_row['Include in Review (Y/N)'] = "N"  # Default to exclude if processing failed
+        empty_row['Exclusion Reason'] = "Processing failed"
         return empty_row
     
     def process_all_pdfs(self) -> List[Dict[str, str]]:
