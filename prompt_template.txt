@@ -53,7 +53,7 @@ Format your response as follows for each question (EXACTLY as shown):
 DETAILED QUESTIONS:
 1. Primary Stakeholders: Who are the main participants/stakeholders? e.g., students, teachers.
 2. Context: What is the context or setting? e.g., classroom, assignment.
-3. Tech/AI type: What technology or AI is used? e.g., game-based, ITS.
+3. Tech/AI type: What technology or AI is used? e.g., game-based, ITS. Be SPECIFIC. If the answer is generic like "AI Applications", then put "Not specified".
 4. Tool/Platform: What specific tools or platforms are mentioned? e.g., Decimal Point (name of platform)
 5. Education level: What education level are the participants? e.g., undergraduate
 6. Feedback term: What terms are used for 'feedback'? e.g., hint, scaffold. Pay close attention to adjectives and descriptors used (e.g., "elaborate", "adaptive", "immediate", "corrective" )
