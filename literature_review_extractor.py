@@ -20,6 +20,12 @@ import pandas as pd
 import pdfplumber
 from openai import OpenAI
 from tqdm import tqdm
+import unicodedata
+import re
+try:
+    import fitz  # PyMuPDF - for additional text extraction
+except ImportError:
+    fitz = None
 
 from config import (
     OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS, OPENAI_TEMPERATURE,
