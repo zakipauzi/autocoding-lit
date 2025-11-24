@@ -344,20 +344,19 @@ class LiteratureReviewExtractor:
             while i < len(lines):
                 line = lines[i]
                 
-                # Look for numbered questions with format "**X. Answer**: content"
+                # Method 1: Look for format "**X. Answer**: content"
                 for num_str, base_column in base_columns.items():
                     if line.startswith(f"**{num_str}.") and "**:" in line:
-                        # Extract the answer
                         answer_part = line.split("**:", 1)
                         if len(answer_part) > 1:
                             answer = answer_part[1].strip()
                             coded_data[base_column] = answer
                             self.logger.info(f"Extracted {base_column}: {answer[:50]}...")
                             
-                            # Look for the corresponding source in next few lines
+                            # Look for source in next few lines
                             source_column = base_column + " - Source"
                             j = i + 1
-                            while j < len(lines) and j < i + 5:  # Look ahead up to 5 lines
+                            while j < len(lines) and j < i + 5:
                                 next_line = lines[j]
                                 if next_line.startswith("**Source**:"):
                                     source = next_line.replace("**Source**:", "").strip()
@@ -365,27 +364,36 @@ class LiteratureReviewExtractor:
                                     self.logger.info(f"Extracted {source_column}: {source[:50]}...")
                                     break
                                 elif any(next_line.startswith(f"**{n}.") for n in base_columns.keys()):
-                                    # Hit next question without finding source
                                     break
                                 j += 1
                         break
                 
-                # Alternative format: look for lines that start with question numbers
-                if not any(line.startswith(f"**{num}.") for num in base_columns.keys()):
-                    for num_str, base_column in base_columns.items():
-                        if line.lower().startswith(f"{num_str}."):
-                            # Extract answer after colon
-                            if ":" in line:
-                                answer = line.split(":", 1)[1].strip()
-                                # Clean up markdown formatting
-                                answer = answer.replace("**", "").replace("*", "").strip()
-                                coded_data[base_column] = answer
-                                self.logger.info(f"Extracted {base_column}: {answer[:50]}...")
-                            break
+                # Method 2: Look for format "X. **Field**: content" 
+                for num_str, base_column in base_columns.items():
+                    if line.startswith(f"{num_str}.") and "**:" in line:
+                        answer_part = line.split("**:", 1)
+                        if len(answer_part) > 1:
+                            answer = answer_part[1].strip()
+                            coded_data[base_column] = answer
+                            self.logger.info(f"Extracted {base_column}: {answer[:50]}...")
+                        break
                 
-                i += 1
-            
-            # Log extraction summary
+                # Method 3: Look for simple numbered format "X. content"
+                for num_str, base_column in base_columns.items():
+                    # Skip if already extracted
+                    if coded_data[base_column] != "Not specified":
+                        continue
+                        
+                    if line.startswith(f"{num_str}.") and ":" in line:
+                        answer = line.split(":", 1)[1].strip()
+                        # Clean up markdown formatting
+                        answer = answer.replace("**", "").replace("*", "").strip()
+                        if answer and not answer.startswith("What") and not answer.startswith("Who") and not answer.startswith("How"):
+                            coded_data[base_column] = answer
+                            self.logger.info(f"Extracted {base_column}: {answer[:50]}...")
+                        break
+                
+                i += 1            # Log extraction summary
             # Total fields = CSV_COLUMNS - 2 (exclude Title and Include columns) 
             total_fields = len(CSV_COLUMNS) - 2  
             extracted_count = sum(1 for col, val in coded_data.items() 
