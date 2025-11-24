@@ -1,5 +1,18 @@
 Analyze this research paper and extract the following information. For each answer, provide BOTH the answer AND the source evidence (quote from the paper with section/page reference).
 
+FIRST, evaluate if this paper should be INCLUDED or EXCLUDED from the literature review based on the exclusion criteria below:
+
+EXCLUSION CRITERIA:
+- Not English language.
+- Not Maths education related.
+- Not feedback or formative assessment related.
+
+Format your response starting with:
+**Include in Review**: Y or N
+**Reason if excluded**: [Brief reason based on exclusion criteria]
+
+If the paper is to be INCLUDED, then answer all the following questions. If EXCLUDED, you may skip the detailed questions.
+
 Format your response as follows for each question:
 **Question Number. Answer**: [Your answer]
 **Source**: [Quote from paper with section/page reference]
@@ -9,9 +22,9 @@ Format your response as follows for each question:
 3. Tech/AI type: What technology or AI is used? e.g., game-based, ITS.
 4. Tool/Platform: What specific tools or platforms are mentioned? e.g., Decimal Point (name of platform)
 5. Education level: What education level are the participants? e.g., undergraduate
-6. Feedback term: What terms are used for 'feedback'? e.g., hint, scaffold
-7. Description of context: How is the feedback context described? How did they describe, if any, what the feedback is?
-8. Our evaluation: What is the quality/type of feedback?
+6. Feedback term: What terms are used for 'feedback'? e.g., hint, scaffold. Pay close attention to adjectives and descriptors used (e.g., "elaborate", "adaptive", "immediate", "corrective" )
+7. Description of mechanism and context: How is the feedback context described? How did the paper describe, if any, what the feedback is? When and how the feedback is provided? What triggers it? 
+8. Our interpretation/analysis: Does the paper's term for feedback actually matches what it seems that the paper is doing. What is the quality/type of feedback? 
 9. Agency type: What type of student agency is present? Is there any form of student agency?
 10. Feedback timing control: Do students control feedback timing?
 11. Metrics for evaluation: What metrics are used to evaluate results of feedback effect?

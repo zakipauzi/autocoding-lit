@@ -310,6 +310,14 @@ class LiteratureReviewExtractor:
             # Split response into lines for processing
             lines = [line.strip() for line in response_text.split('\n') if line.strip()]
             
+            # First, look for inclusion/exclusion decision
+            for line in lines:
+                if line.startswith("**Include in Review**:"):
+                    include_decision = line.replace("**Include in Review**:", "").strip()
+                    coded_data['Include in Review (Y/N)'] = include_decision
+                    self.logger.info(f"Extracted inclusion decision: {include_decision}")
+                    break
+            
             # Base column names (without " - Source" suffix)
             base_columns = {
                 '1': '1.1 Primary Stakeholders',
@@ -372,9 +380,10 @@ class LiteratureReviewExtractor:
                 i += 1
             
             # Log extraction summary
-            total_fields = len(CSV_COLUMNS) - 1  # Exclude Title
+            # Total fields = CSV_COLUMNS - 2 (exclude Title and Include columns) 
+            total_fields = len(CSV_COLUMNS) - 2  
             extracted_count = sum(1 for col, val in coded_data.items() 
-                                if col != "Title" and val != "Not specified")
+                                if col not in ["Title", "Include in Review (Y/N)"] and val != "Not specified")
             self.logger.info(f"Successfully extracted {extracted_count} out of {total_fields} fields")
             
         except Exception as e:
@@ -385,7 +394,10 @@ class LiteratureReviewExtractor:
     
     def _create_empty_row(self, title: str) -> Dict[str, str]:
         """Create empty row with default values when processing fails."""
-        return {col: "Processing failed" for col in CSV_COLUMNS if col != 'Title'} | {'Title': title}
+        empty_row = {col: "Processing failed" for col in CSV_COLUMNS if col not in ['Title', 'Include in Review (Y/N)']}
+        empty_row['Title'] = title
+        empty_row['Include in Review (Y/N)'] = "N"  # Default to exclude if processing failed
+        return empty_row
     
     def process_all_pdfs(self) -> List[Dict[str, str]]:
         """Process all PDF files in the PDF folder."""
