@@ -20,14 +20,19 @@ from tqdm import tqdm
 import unicodedata
 import subprocess
 import tempfile
+import fitz
+import pypdf as PyPDF  # Modern replacement for PyPDF2
+
+# OCR imports for image-based PDFs
 try:
-    import fitz  # PyMuPDF - for additional text extraction
+    import pytesseract
+    from PIL import Image
+    import io
+    # Set the tesseract command path for Windows
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    OCR_AVAILABLE = True
 except ImportError:
-    fitz = None
-try:
-    import PyPDF2
-except ImportError:
-    PyPDF2 = None
+    OCR_AVAILABLE = False
 
 from config import (
     OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS, OPENAI_TEMPERATURE,
@@ -206,12 +211,12 @@ class LiteratureReviewExtractor:
             except Exception as e:
                 self.logger.warning(f"Method 3 (PyMuPDF advanced) failed for {filename}: {str(e)}")
         
-        # Method 4: PyPDF2 (if available)
-        if PyPDF2:
+        # Method 4: PyPDF (modern replacement for PyPDF2)
+        if PyPDF:
             try:
                 text = ""
                 with open(pdf_path, 'rb') as file:
-                    pdf_reader = PyPDF2.PdfReader(file)
+                    pdf_reader = PyPDF.PdfReader(file)
                     
                     # Check if encrypted
                     if pdf_reader.is_encrypted:
@@ -228,14 +233,14 @@ class LiteratureReviewExtractor:
                                 page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
                                 text += page_text + "\n"
                         except Exception as e:
-                            self.logger.warning(f"PyPDF2 error on page {page_num + 1} of {filename}: {str(e)}")
+                            self.logger.warning(f"PyPDF error on page {page_num + 1} of {filename}: {str(e)}")
                             continue
                 
                 if text.strip():
-                    self.logger.info(f"Method 4 (PyPDF2) succeeded: {len(text)} characters from {filename}")
+                    self.logger.info(f"Method 4 (PyPDF) succeeded: {len(text)} characters from {filename}")
                     return text.strip()
             except Exception as e:
-                self.logger.warning(f"Method 4 (PyPDF2) failed for {filename}: {str(e)}")
+                self.logger.warning(f"Method 4 (PyPDF) failed for {filename}: {str(e)}")
         
         # Method 5: Command-line pdftotext (if available)
         try:
@@ -255,23 +260,79 @@ class LiteratureReviewExtractor:
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
             self.logger.warning(f"Method 5 (pdftotext) failed for {filename}: {str(e)}")
         
-        # Method 6: Try to extract images and attempt OCR (basic fallback)
+        # Method 6: OCR-based extraction for image-based PDFs
+        if OCR_AVAILABLE and fitz:
+            try:
+                self.logger.info(f"Attempting OCR extraction for {filename}")
+                doc = fitz.open(pdf_path)
+                text = ""
+                
+                for page_num, page in enumerate(doc):
+                    try:
+                        # Convert PDF page to image with high resolution
+                        mat = fitz.Matrix(2, 2)  # 2x zoom for better OCR accuracy
+                        pix = page.get_pixmap(matrix=mat)
+                        img_data = pix.tobytes("png")
+                        
+                        # Open with PIL and perform OCR
+                        image = Image.open(io.BytesIO(img_data))
+                        
+                        # Configure tesseract for better results
+                        custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ,.?!:;()[]{}"\'-+=/*@#$%^&_|\\~`'
+                        page_text = pytesseract.image_to_string(image, config=custom_config)
+                        
+                        if page_text and len(page_text.strip()) > 10:
+                            page_text = unicodedata.normalize('NFKD', page_text)
+                            page_text = page_text.encode('utf-8', errors='ignore').decode('utf-8')
+                            text += page_text + "\n"
+                            self.logger.info(f"OCR extracted {len(page_text)} characters from page {page_num + 1}")
+                            
+                    except Exception as e:
+                        self.logger.warning(f"OCR failed on page {page_num + 1} of {filename}: {str(e)}")
+                        continue
+                
+                doc.close()
+                
+                if text.strip() and len(text.strip()) > 100:  # Require meaningful OCR content
+                    self.logger.info(f"Method 6 (OCR) succeeded: {len(text)} characters from {filename}")
+                    return text.strip()
+                else:
+                    self.logger.warning(f"OCR extracted insufficient content from {filename}")
+                    
+            except Exception as e:
+                self.logger.warning(f"Method 6 (OCR) failed for {filename}: {str(e)}")
+        
+        # Method 7: Enhanced fallback with basic content extraction
         try:
-            # This is a last resort - extract some basic info from PDF structure
+            # This is a last resort - try to extract any text content
             with open(pdf_path, 'rb') as file:
                 # Read first 1000 bytes to check for PDF structure
                 header = file.read(1000)
                 if b'%PDF' in header:
-                    # It's a valid PDF, might be image-based
-                    self.logger.warning(f"PDF {filename} appears to be image-based or corrupted - extracting minimal info")
-                    
-                    # Try to get filename-based fallback title  
+                    # It's a valid PDF, create informative fallback
                     fallback_title = Path(pdf_path).stem
-                    fallback_text = f"Title: {fallback_title}\n\nNote: This PDF could not be processed due to technical issues. The file may be:\n- Image-based (scanned document)\n- Corrupted\n- Password protected\n- Using non-standard encoding\n\nPlease manually review this paper."
                     
+                    # Try to extract some metadata or structure info
+                    metadata_info = ""
+                    try:
+                        if fitz:
+                            doc = fitz.open(pdf_path)
+                            metadata = doc.metadata
+                            if metadata.get('title'):
+                                metadata_info = f"\nExtracted title: {metadata['title']}"
+                            if metadata.get('author'):
+                                metadata_info += f"\nExtracted author: {metadata['author']}"
+                            metadata_info += f"\nPage count: {doc.page_count}"
+                            doc.close()
+                    except Exception:
+                        pass
+                    
+                    fallback_text = f"Title: {fallback_title}{metadata_info}\n\nNote: This PDF appears to be image-based or uses non-standard encoding. Text extraction failed with all available methods including OCR. This paper requires manual review for complete content extraction."
+                    
+                    self.logger.warning(f"All extraction methods failed for {filename} - using enhanced fallback")
                     return fallback_text
         except Exception as e:
-            self.logger.warning(f"Method 6 (fallback) failed for {filename}: {str(e)}")
+            self.logger.warning(f"Method 7 (enhanced fallback) failed for {filename}: {str(e)}")
         
         # Final check - log detailed error information
         try:
@@ -648,7 +709,7 @@ class LiteratureReviewExtractor:
                 continue
             
             # Check if extracted text is meaningful (not just fallback message)
-            if "could not be processed due to technical issues" in text.lower():
+            if "text extraction failed with all available methods including ocr" in text.lower():
                 self.logger.warning(f"Fallback text used for {pdf_file.name} - manual review needed")
                 # Use the extracted text anyway as it contains the title
                 title = self.get_paper_title(text, pdf_file.name)
